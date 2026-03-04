@@ -37,6 +37,18 @@ export async function addDefaultEntries() {
       }
     })
   } else {
+    results = ext.model.tabs
+      .map((el) => {
+        return {
+          searchScore: 1,
+          ...el,
+        }
+      })
+      .sort((a, b) => {
+        return a.lastVisitSecondsAgo - b.lastVisitSecondsAgo
+      })
+    results.shift() // remove current tab
+    /*
     // Default: Find bookmarks that match current page URL
     let currentUrl = window.location.href
     const [tab] = await getBrowserTabs({ active: true, currentWindow: true })
@@ -46,6 +58,7 @@ export async function addDefaultEntries() {
     // Remove trailing slash or hash from URL, so the comparison works better
     currentUrl = tab.url.replace(/[/#]$/, '')
     results.push(...ext.model.bookmarks.filter((el) => el.originalUrl === currentUrl))
+    */
   }
 
   ext.model.result = results

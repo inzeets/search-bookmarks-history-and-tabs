@@ -59,6 +59,7 @@ export async function initExtension() {
   window.addEventListener('hashchange', hashRouter, false)
   ext.dom.searchApproachToggle.addEventListener('mouseup', toggleSearchApproach)
   ext.dom.searchInput.addEventListener('keyup', search)
+  ext.dom.searchInput.focus()
 
   // Display default entries
   await addDefaultEntries()
