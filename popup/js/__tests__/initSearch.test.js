@@ -36,6 +36,7 @@ const mockDependencies = async (overrides = {}) => {
         history: [{ originalId: 'h1' }],
       }),
     ),
+    loadHistoryData: jest.fn(() => Promise.resolve(false)),
     addDefaultEntries: jest.fn(async () => {
       const defaults = [{ originalId: 'default' }]
       if (globalThis.ext?.model) {
@@ -71,6 +72,7 @@ const mockDependencies = async (overrides = {}) => {
   await jest.unstable_mockModule('../model/searchData.js', () => ({
     __esModule: true,
     getSearchData: config.getSearchData,
+    loadHistoryData: config.loadHistoryData,
   }))
   await jest.unstable_mockModule('../search/common.js', () => ({
     __esModule: true,

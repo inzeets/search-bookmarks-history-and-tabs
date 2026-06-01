@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Search Bookmarks, History and Tabs",
+  "name": "InZ - Search Bookmarks, History and Tabs",
   "description": "Browser extension to (fuzzy) search and navigate bookmarks, history and open tabs.",
   "homepage_url": "https://github.com/Fannon/search-bookmarks-history-and-tabs",
   "author": "Simon Heimler",

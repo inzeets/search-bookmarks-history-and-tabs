@@ -58,16 +58,17 @@ createTestExt({
   initialized: true,
 })
 
-const { getSearchData } = await import('../model/searchData.js')
+const { getSearchData, loadHistoryData } = await import('../model/searchData.js')
 const { search } = await import('../search/common.js')
 
 describe('Performance Benchmarks', () => {
   beforeAll(async () => {
-    // Pre-load data into the model
+    // Pre-load data into the model (fast sources, then history)
     const data = await getSearchData()
     ext.model.bookmarks = data.bookmarks
     ext.model.history = data.history
     ext.model.tabs = data.tabs
+    await loadHistoryData()
   })
 
   test('Search Performance - Precise Strategy (5000 items)', async () => {

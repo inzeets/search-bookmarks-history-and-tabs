@@ -10,7 +10,7 @@
 
 import { createExtensionContext } from './helper/extensionContext.js'
 import { getEffectiveOptions } from './model/optionsStorage.js'
-import { getSearchData } from './model/searchData.js'
+import { getSearchData, loadHistoryData } from './model/searchData.js'
 
 import { addDefaultEntries, search } from './search/common.js'
 
@@ -79,6 +79,24 @@ export async function initExtension() {
   }
 
   console.debug(`Init in ${Date.now() - startTime}ms`)
+
+  // Load history in the background so the popup renders default entries immediately.
+  // Once history is ready, refresh the view if the user has already typed a query
+  // (the empty/default "all" view does not include history, so no refresh needed).
+  loadHistoryData()
+    .then((loaded) => {
+      if (!loaded) return
+      // Cached results were computed without history; drop them so the refresh is accurate.
+      if (ext.searchCache) {
+        ext.searchCache.clear()
+      }
+      if (ext.dom.searchInput.value.trim()) {
+        search()
+      }
+    })
+    .catch((err) => {
+      printError(err, 'Could not load history')
+    })
 }
 
 //////////////////////////////////////////

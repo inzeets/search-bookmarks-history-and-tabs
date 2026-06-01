@@ -28,6 +28,7 @@ let actualConvertBrowserBookmarks
 let actualConvertBrowserHistory
 
 let getSearchData
+let loadHistoryData
 
 let currentTabs = []
 let currentBookmarks = []
@@ -63,7 +64,7 @@ beforeAll(async () => {
   actualConvertBrowserTabs = helperModule.convertBrowserTabs
   actualConvertBrowserBookmarks = helperModule.convertBrowserBookmarks
   actualConvertBrowserHistory = helperModule.convertBrowserHistory
-  ;({ getSearchData } = await import('../searchData.js'))
+  ;({ getSearchData, loadHistoryData } = await import('../searchData.js'))
 })
 
 describe('getSearchData', () => {
@@ -166,27 +167,35 @@ describe('getSearchData', () => {
       const tabsAfterConvert = actualConvertBrowserTabs(mockState.tabs)
       const historyAfterConvert = actualConvertBrowserHistory(mockState.history)
 
+      // getSearchData loads the fast sources (no history yet)
       const result = await getSearchData()
+      expect(historySearchMock).not.toHaveBeenCalled()
+      expect(result.history).toEqual([])
+      Object.assign(ext.model, result)
+
+      // loadHistoryData fetches history and merges it into the loaded model
+      const loaded = await loadHistoryData()
+      expect(loaded).toBe(true)
 
       expect(historySearchMock).toHaveBeenCalled()
       const [historySearchArgs] = historySearchMock.mock.calls[0]
       expect(historySearchArgs.maxResults).toBe(ext.opts.historyMaxItems)
       expect(historySearchArgs.startTime).toBe(baseTime - 1000 * 60 * 60 * 24 * ext.opts.historyDaysAgo)
 
-      const mergedTab = result.tabs.find((tab) => tab.originalUrl === 'https://example.com')
+      const mergedTab = ext.model.tabs.find((tab) => tab.originalUrl === 'https://example.com')
       expect(mergedTab.lastVisitSecondsAgo).toBe(25)
       expect(mergedTab.visitCount).toBe(12)
 
-      const untouchedTab = result.tabs.find((tab) => tab.originalUrl === 'https://no-match.com')
+      const untouchedTab = ext.model.tabs.find((tab) => tab.originalUrl === 'https://no-match.com')
       const originalUntouchedTab = tabsAfterConvert.find((tab) => tab.originalUrl === 'https://no-match.com')
       expect(untouchedTab).toEqual(originalUntouchedTab)
 
-      const mergedBookmark = result.bookmarks.find((bookmark) => bookmark.originalUrl === 'https://example.com')
+      const mergedBookmark = ext.model.bookmarks.find((bookmark) => bookmark.originalUrl === 'https://example.com')
       expect(mergedBookmark.lastVisitSecondsAgo).toBe(25)
       expect(mergedBookmark.visitCount).toBe(12)
 
       const remainingHistory = historyAfterConvert.filter((entry) => entry.originalUrl !== 'https://example.com')
-      expect(result.history).toEqual(remainingHistory)
+      expect(ext.model.history).toEqual(remainingHistory)
     } finally {
       nowSpy.mockRestore()
     }

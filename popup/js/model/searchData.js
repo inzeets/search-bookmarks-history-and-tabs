@@ -98,7 +98,11 @@ function flagBookmarksWithOpenTabs(bookmarks, tabs) {
 }
 
 /**
- * Fetch and normalize the datasets used by the popup search experience.
+ * Fetch and normalize the fast datasets used by the popup search experience.
+ *
+ * History is intentionally excluded for the real browser path (it is the slowest
+ * source) and loaded separately via {@link loadHistoryData} so the popup can render
+ * default entries immediately. In local dev/mock mode history is still included.
  *
  * @returns {Promise<{tabs: Array, bookmarks: Array, history: Array}>} Prepared search data.
  */
@@ -129,15 +133,12 @@ export async function getSearchData() {
       console.warn('Could not load example mock data', err)
     }
   } else {
-    // Fetch all browser data sources in parallel for faster startup
-    const [browserTabs, browserBookmarks, history, browserTabGroups] = await Promise.all([
+    // Fetch the fast data sources (tabs, bookmarks, tab groups) in parallel.
+    // History is loaded separately via loadHistoryData() so the popup can render
+    // default entries immediately without waiting on the slow history query.
+    const [browserTabs, browserBookmarks, browserTabGroups] = await Promise.all([
       browserApi.tabs && ext.opts.enableTabs ? getBrowserTabs() : Promise.resolve([]),
       browserApi.bookmarks && ext.opts.enableBookmarks ? getBrowserBookmarks() : Promise.resolve([]),
-      browserApi.history && ext.opts.enableHistory
-        ? getBrowserHistory(Date.now() - 1000 * 60 * 60 * 24 * ext.opts.historyDaysAgo, ext.opts.historyMaxItems).then(
-            convertBrowserHistory,
-          )
-        : Promise.resolve([]),
       browserApi.tabGroups && ext.opts.enableTabs ? getBrowserTabGroups() : Promise.resolve([]),
     ])
 
@@ -148,20 +149,6 @@ export async function getSearchData() {
     result.tabs = convertBrowserTabs(browserTabs, groupMap)
     result.bookmarkTree = browserBookmarks
     result.bookmarks = convertBrowserBookmarks(browserBookmarks)
-    result.history = history
-
-    // Merge history data into bookmarks and tabs if history is enabled
-    if (browserApi.history && ext.opts.enableHistory && result.history.length > 0) {
-      // Build maps with URL as key, so we have fast hashmap access
-      const historyMap = new Map(result.history.map((item) => [item.url, item]))
-
-      const mergedHistoryUrls = new Set()
-
-      result.bookmarks = mergeHistoryLazily(result.bookmarks, historyMap, mergedHistoryUrls)
-      result.tabs = mergeHistoryLazily(result.tabs, historyMap, mergedHistoryUrls)
-
-      result.history = result.history.filter((item) => !mergedHistoryUrls.has(item.originalUrl))
-    }
 
     // Flag bookmarks with open tabs
     flagBookmarksWithOpenTabs(result.bookmarks, result.tabs)
@@ -183,4 +170,44 @@ export async function getSearchData() {
   //   } days (Option: historyDaysAgo).`,
   // )
   return result
+}
+
+/**
+ * Fetch browser history and merge it into the already loaded bookmarks/tabs.
+ *
+ * This is run after {@link getSearchData} so the popup can show default entries
+ * without waiting on the (slow) history query. Mutates `ext.model.history`,
+ * `ext.model.bookmarks` and `ext.model.tabs` in place.
+ *
+ * @returns {Promise<boolean>} True if history was loaded (real browser path),
+ *   false when there is nothing to load (mock mode or history disabled).
+ */
+export async function loadHistoryData() {
+  // In mock/dev mode history is already loaded by getSearchData()
+  if (!browserApi.bookmarks || !browserApi.history || !ext.opts.enableHistory) {
+    return false
+  }
+
+  const startTime = Date.now()
+  const browserHistory = await getBrowserHistory(
+    Date.now() - 1000 * 60 * 60 * 24 * ext.opts.historyDaysAgo,
+    ext.opts.historyMaxItems,
+  )
+  let history = convertBrowserHistory(browserHistory)
+
+  // Merge history data into bookmarks and tabs
+  if (history.length > 0) {
+    // Build maps with URL as key, so we have fast hashmap access
+    const historyMap = new Map(history.map((item) => [item.url, item]))
+    const mergedHistoryUrls = new Set()
+
+    ext.model.bookmarks = mergeHistoryLazily(ext.model.bookmarks, historyMap, mergedHistoryUrls)
+    ext.model.tabs = mergeHistoryLazily(ext.model.tabs, historyMap, mergedHistoryUrls)
+
+    history = history.filter((item) => !mergedHistoryUrls.has(item.originalUrl))
+  }
+
+  ext.model.history = history
+  console.debug(`Loaded ${history.length} history items in ${Date.now() - startTime}ms.`)
+  return true
 }
