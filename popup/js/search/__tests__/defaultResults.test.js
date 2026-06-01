@@ -110,7 +110,7 @@ describe('addDefaultEntries', () => {
       expect(results).toEqual([expect.objectContaining({ id: 1, title: 'Example' })])
     })
 
-    test('shows all bookmarks if multiple match current tab URL', async () => {
+    test('deduplicates bookmarks that share the current tab URL', async () => {
       ext.model.bookmarks = [
         { id: 1, url: 'example.com', originalUrl: 'https://example.com', title: 'Example 1' },
         { id: 2, url: 'example.com', originalUrl: 'https://example.com', title: 'Example 2' },
@@ -120,7 +120,29 @@ describe('addDefaultEntries', () => {
 
       const results = await addDefaultEntries()
 
-      expect(results.map((r) => r.id)).toEqual([1, 2])
+      expect(results.map((r) => r.id)).toEqual([1])
+    })
+
+    test('merges tags from duplicate bookmarks into the kept entry', async () => {
+      ext.model.bookmarks = [
+        { id: 1, url: 'example.com', originalUrl: 'https://example.com', title: 'Example 1', tagsArray: ['work'] },
+        {
+          id: 2,
+          url: 'example.com',
+          originalUrl: 'https://example.com',
+          title: 'Example 2',
+          tagsArray: ['work', 'docs'],
+        },
+      ]
+      ext.model.tabs = []
+      mockGetBrowserTabs.mockResolvedValue([{ url: 'https://example.com' }])
+
+      const results = await addDefaultEntries()
+
+      expect(results.map((r) => r.id)).toEqual([1])
+      expect(results[0].tagsArray).toEqual(['work', 'docs'])
+      // Original model object must stay untouched
+      expect(ext.model.bookmarks[0].tagsArray).toEqual(['work'])
     })
 
     test('matches URLs with and without trailing slashes', async () => {

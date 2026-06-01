@@ -2,7 +2,7 @@
 
 #options {
   width: var(--w);
-  height: calc(var(--h) - 44px);
+  height: calc(var(--h) - var(--footer-h));
   overflow: hidden;
   position: relative;
 }
@@ -17,9 +17,10 @@
 
 /* Config Textarea */
 #options textarea {
-  height: 450px;
-  font-size: 18px;
+  height: 527px;
+  font-size: 13px;
   font-family: Consolas, monospace;
+  padding: 3px 5px;
   resize: none;
 }
 
@@ -30,7 +31,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 450px;
+  height: 527px;
   background: rgba(255, 255, 255, 0.98);
   color: #cc0000;
   font-size: 14px;
@@ -110,13 +111,30 @@
 #options .controls {
   bottom: 12px;
 }
+.controls {
+  padding-top: 0;
+  font-size: 13px;
+  height: 18px;
+}
+.controls .button {
+  height: 20px;
+  border-radius: 3px;
+}
+.controls a,
+.controls a:hover {
+  margin: 0 0 0 8px;
+  padding: 2px 12px 4px;
+  border: none;
+  font-size: 12px;
+}
 
-/* Help Box */
+/* Help Box (hidden) */
 #options .help {
   padding: 2px 6px;
-  background: var(--li-bg);
-  border-left: 4px solid var(--a);
-  font-size: 0.9em;
+  background: #000;
+  border-left: 4px solid #4494c9;
+  font-size: 13px !important;
+  display: none;
 }
 
 /* Action Buttons */

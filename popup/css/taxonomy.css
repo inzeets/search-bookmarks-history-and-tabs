@@ -3,11 +3,9 @@
 #tags-view,
 #folders-view,
 #groups-view {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 515px;
-  height: 556px;
+  position: relative;
+  width: var(--w);
+  height: calc(var(--h) - var(--footer-h));
   background: var(--bg);
   padding: 8px 10px;
   overflow-y: scroll;
@@ -80,7 +78,7 @@ body#tags .error-overlay,
 body#folders .error-overlay,
 body#groups .error-overlay {
   top: 0 !important;
-  height: 556px !important;
+  height: calc(var(--h) - var(--footer-h)) !important;
 }
 
 .taxonomy-footer {

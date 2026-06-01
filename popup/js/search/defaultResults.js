@@ -69,7 +69,11 @@ export async function addDefaultEntries() {
         .filter((tab) => {
           // Exclude the currently active tab from recent tabs
           const isCurrentTab = activeTab && activeTab.id !== undefined && tab.originalId === activeTab.id
-          return tab?.url && !isCurrentTab && !tab.url.startsWith('chrome://') && !tab.url.startsWith('about:')
+          const url = tab?.url
+          // Keep real internal pages (e.g. about:debugging, about:config) but skip
+          // chrome:// pages and the empty about: placeholders that add no value.
+          const isBlankPage = url === 'about:blank' || url === 'about:newtab' || url === 'about:home'
+          return url && !isCurrentTab && !url.startsWith('chrome://') && !isBlankPage
         })
         .map((el) => ({ ...el }))
         .sort((a, b) => {
@@ -83,6 +87,35 @@ export async function addDefaultEntries() {
 
       results.push(...recentTabs)
     }
+
+    // Collapse duplicate URLs so a page that is bookmarked more than once (or bookmarked
+    // and also open in a tab) only appears once. The first occurrence is kept (favoring
+    // the matching bookmark over a recent tab), but tags from the dropped duplicates are
+    // merged in so no tag badges are lost.
+    const keptByUrl = new Map()
+    const deduped = []
+    for (const entry of results) {
+      if (!entry.url) {
+        deduped.push(entry)
+        continue
+      }
+      const kept = keptByUrl.get(entry.url)
+      if (!kept) {
+        // Clone so merging tags below never mutates the shared ext.model objects
+        const clone = { ...entry }
+        keptByUrl.set(entry.url, clone)
+        deduped.push(clone)
+      } else if (entry.tagsArray?.length) {
+        const mergedTags = kept.tagsArray ? [...kept.tagsArray] : []
+        for (const tag of entry.tagsArray) {
+          if (!mergedTags.includes(tag)) mergedTags.push(tag)
+        }
+        kept.tagsArray = mergedTags
+        kept.tagsArrayLower = mergedTags.map((t) => t.toLowerCase())
+        kept.tags = mergedTags.map((t) => `#${t}`).join(' ')
+      }
+    }
+    results = deduped
   }
 
   ext.model.result = results
