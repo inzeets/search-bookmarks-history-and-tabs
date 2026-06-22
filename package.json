@@ -28,7 +28,6 @@
     "serve": "^14.2.6"
   },
   "scripts": {
-    "prepare": "lefthook install",
     "clean": "node bin/clean.js",
     "build": "npm run clean && npm run build:update-libs && npm run build:bundle && npm run build:update-manifests && npm run build:create-dist && npm run format && npm run size && npm run build:sync-dev-dist",
     "build:bundle": "node bin/bundle.js",
